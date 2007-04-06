@@ -3,8 +3,45 @@ use base 'File::PathInfo';
 use strict;
 use warnings;
 use YAML;
+use Carp;
+=pod
+
+=head1 NAME
+
+File::PathInfo::Ext - metadata files, renaming, some other things on top of PathInfo
+
+=head1 SYNOPSIS
+
+	use File::PathInfo::Ext;
+
+	my $f = new File::PathInfo::Ext('/home/myself/thisfile.pdf');
+
+	$f->meta_save({ keywords => 'salt, pepper, lemon, ginger' });
+
+	printf "keywords are: %s\n", $f->meta->{keywords};
+
+	$f->rename('thatfile.pdf');
+
+	printf "filename is now %s\n", $f->filename;
+	printf "keywords are still: %s\n", $f->meta->{keywords};	
+	
+
+=head1 DESCRIPTION
+
+This extends File::PathInfo.
+Added is a simple api for YAML metadata files. Also a way to rename the file, and 
+maintain the metadata file (YAML file).
+
+This software is still under development.
+
+=head1 METHODS
+
+These are added methods to the usual L<File::PathInfo> methods.
+
+=cut
+
 #use vars qw($VERSION);
-our $VERSION = sprintf "%d.%02d", q$Revision: 1.3 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%02d", q$Revision: 1.6 $ =~ /(\d+)/g;
 
 # extended, with metadata
 my $DEBUG=0; sub DEBUG : lvalue { $DEBUG }
@@ -14,13 +51,15 @@ my $META_EXT = 'meta'; sub META_EXT : lvalue { $META_EXT }
 # TODO : rename must be able to fix up metadata
 
 
+
+
 sub rename {
 	my ($self, $newname) =(shift, shift);
 	
 	print STDERR __PACKAGE__."::rename called\n" if DEBUG;
 
 	unless( rename( $self->abs_path, $self->abs_loc ."/$newname")){
-		warn ('cant rename '.$self->abs_path .' to '.$self->abs_loc ."/$newname, $!");
+		carp ('cant rename '.$self->abs_path .' to '.$self->abs_loc ."/$newname, $!");
 		return 0;
 	}	
 	# rename meta
@@ -44,8 +83,6 @@ sub rename {
 	return 1;
 }
 
-
-
 sub meta {
 	my $self = shift;
 	$self->{meta} ||= get_meta($self->abs_path);
@@ -65,6 +102,100 @@ sub meta_delete {
 	$self->{meta} = {};
 	return 1;
 }
+
+
+
+
+
+
+# list 
+
+sub ls {
+	my $self = shift;
+	$self->is_dir or return;
+
+	unless(defined $self->{_data}->{ls}){
+		printf STDERR "ls for [%s]\n", $self->abs_path if DEBUG;
+		opendir(DIR, $self->abs_path);
+		my @ls = grep { !/^\.+$/ } readdir DIR;
+		close DIR;
+		### @ls
+		$self->{_data}->{ls}  = \@ls;
+	}
+	return $self->{_data}->{ls};
+}
+
+sub lsa {
+	my $self = shift;
+	$self->is_dir or return;	
+	my @ls; for (@{$self->ls}){ push @ls, $self->abs_path.'/'.$_;	}
+	return \@ls;
+}
+
+=head2 ls() and lsa()
+
+takes no argument
+returns array ref of files (and dirs and everything else). No . and ..
+returns undef if it's not a dir
+
+lsa() returns absolute paths, not just filename.
+
+=cut
+
+sub lsf {
+	my $self = shift;	
+	$self->is_dir or return;	
+	unless( defined $self->{_data}->{_lsf_}){
+		@{$self->{_data}->{_lsf_}} = grep { -f $self->abs_path .'/'. $_ } @{$self->ls};
+	}
+	return $self->{_data}->{_lsf_};	
+}
+
+sub lsfa {
+	my $self = shift;	
+	$self->is_dir or return;	
+	my @ls; for (@{$self->lsf}){ push @ls, $self->abs_path.'/'.$_;	}
+	return \@ls;
+}
+
+
+=head2 lsf() and lsfa()
+
+returns array ref of files (-f) in dir. 
+returns undef if it's not a dir.
+
+lsfa() returns absolute paths, not just filename.
+
+=cut 
+
+sub lsd {
+	my $self = shift;	
+	$self->is_dir or return;	
+	unless( defined $self->{_data}->{_lsd_}){
+		@{$self->{_data}->{_lsd_}} = grep { -d $self->abs_path .'/'. $_ } @{$self->ls};
+	}
+	return $self->{_data}->{_lsd_};	
+}
+
+sub lsda {
+	my $self = shift;	
+	$self->is_dir or return;	
+	my @ls; for (@{$self->lsd}){ push @ls, $self->abs_path.'/'.$_;	}
+	return \@ls;
+}
+
+
+=head2 lsd() and lsda()
+
+returns array ref of dirs (-d) in dir. 
+returns undef if it's not a dir.
+
+lsda() returns absolute paths, not just filename.
+
+=cut
+
+
+
 
 
 
@@ -127,44 +258,26 @@ sub delete_meta {
 } 
 
 
+sub is_empty_dir {
+	my $self = shift;
+	$self->is_dir or return 0;
+	
+	scalar @{$self->ls} or return 1;
+	return 0;
+}
 
-1;
 
-__END__
-
+sub get_datahash {
+	my $self = shift;
+	
+	my $hash = $self->SUPER::get_datahash;
+	$hash->{is_empty_dir} = $self->is_empty_dir;
+	return $hash;
+	
+}
 
 
 =pod
-
-=head1 NAME
-
-File::PathInfo::Ext - metadata files, renaming, some other things on top of PathInfo
-
-=head1 SYNOPSIS
-
-	use File::PathInfo::Ext;
-
-	my $f = new File::PathInfo::Ext('/home/myself/thisfile.pdf');
-
-	$f->meta_save({ keywords => 'salt, pepper, lemon, ginger' });
-
-	printf "keywords are: %s\n", $f->meta->{keywords};
-
-	$f->rename('thatfile.pdf');
-
-	printf "filename is now %s\n", $f->filename;
-	printf "keywords are still: %s\n", $f->meta->{keywords};	
-	
-
-=head1 DESCRIPTION
-
-This extends File::PathInfo.
-Added is a simple api for YAML metadata files.
-This software is still under development.
-
-=head1 METHODS
-
-These are added methods to the usual File::PathInfo methods.
 
 =head2 meta()
 
@@ -189,7 +302,7 @@ This rename makes it so if you have a meta file, it is renamed also.
 
 	$f->rename('blah') or die'cant rename';
 
-=head1 EXAMPLES
+=head1 USAGE EXAMPLES
 
 I adore this little module. I use it a lot.
 Here are some examples of how to use it, and you'll see why I like it.
@@ -203,6 +316,7 @@ Here are some examples of how to use it, and you'll see why I like it.
 	use File::PathInfo::Ext;
 
 	my $f = new File::PathInfo::Ext('/home/myself/documents/doc1.pdf');
+	
 	$f->meta_save({ title => 'great title here', keywords => [qw(food spices mice cats)]});
 
 This creates the YAML file '/home/myself/documents/.doc1.pdf.meta':
@@ -251,11 +365,24 @@ by filename)
 
 	$f->rename('newname.whatever');
 
+=item Example 3
+
+A more real world example. If you're a unix minion like me, you swear by the cli. So, I want
+to be able to edit metadata with vim for anything.
+Maybe I'm keeping an archive of scanned documents.. and I want to remember that file 
+/home/docs/document1.pdf is authored by Joe, and that it's a replacement for another file.
+So I simply do 'vim /home/docs/.document1.pdf.meta' and enter:
+
+	---
+	author:joe
+	description: this is not the original. The other one got eaten by my dog.
+
+You can see how useful this can be if you're maintaining a client website, or a large
+archive of mundane data.
 
 =head1 PROCEDURAL SUBROUTINES
 
 None of these are exported by default.
-
 
 =head2 get_meta()
 
@@ -298,7 +425,7 @@ This is just to assure a file does not have metadata anymore.
 
 =head1 SEE ALSO
 
-L<File::PathInfo> and L<YAML>.
+See also L<File::PathInfo>, L<YAML>, and L<File::Attributes>.
 
 =head1 PACKAGE SETTINGS
 
@@ -324,4 +451,6 @@ Please forwards any bug detection to author.
 Leo Charre leocharre at cpan dot org
 	
 =cut
+
+1;
 
