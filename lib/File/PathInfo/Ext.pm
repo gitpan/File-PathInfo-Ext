@@ -2,6 +2,7 @@ package File::PathInfo::Ext;
 use base 'File::PathInfo';
 use strict;
 use warnings;
+use File::Copy;
 use YAML;
 use Carp;
 =pod
@@ -41,7 +42,7 @@ These are added methods to the usual L<File::PathInfo> methods.
 =cut
 
 #use vars qw($VERSION);
-our $VERSION = sprintf "%d.%02d", q$Revision: 1.6 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%02d", q$Revision: 1.7 $ =~ /(\d+)/g;
 
 # extended, with metadata
 my $DEBUG=0; sub DEBUG : lvalue { $DEBUG }
@@ -82,6 +83,52 @@ sub rename {
 	$self->set($self->abs_loc .'/'.$newname) or die($!);
 	return 1;
 }
+
+
+
+
+sub move {
+	my ($self, $to) =(shift, shift);
+	print STDERR __PACKAGE__."::move called [$to]\n" if DEBUG;
+
+	my $from_loc = $self->abs_loc or die;
+	my $filename = $self->filename or die;
+	
+	if (-d $to){
+		print STDERR "move 'to' is a dir, will move there. " if DEBUG;
+		$to.='/'.$filename;
+	}
+
+	if (-e $to){
+		carp __PACKAGE__."::move() [$from_loc/$filename] to [$to] failed, already exists.";
+		return 0;
+	}
+
+	print STDERR "from $from_loc/$filename\nto $to\n" if DEBUG;
+
+	my $to_loc= $to;
+	$to_loc=~s/\/[^\/]+$//;
+	
+	-d $to_loc or carp __PACKAGE__."::move() [$from_loc/$filename] to [$to] failed, [$to_loc] is not a directory." and return 0;
+	
+	unless( File::Copy::mv( "$from_loc/$filename", $to)){
+		carp ("cant move [$from_loc/$filename] to [$to], $! - check permissions?");
+		return 0;
+	}	
+	print STDERR "moved [$from_loc/$filename]to [$to]\n" if DEBUG;
+		
+	File::Copy::mv("$from_loc/.$filename.".META_EXT, "$to_loc/.$filename.".META_EXT );
+	File::Copy::mv("$from_loc/$filename.".META_EXT, "$to_loc/$filename.".META_EXT );
+
+	print STDERR "moved meta\n"if DEBUG;
+
+	$self->set($to) or die("cant set to [$to] after moving, $!");
+	return 1;
+}
+
+
+
+
 
 sub meta {
 	my $self = shift;
@@ -294,6 +341,18 @@ Saves the current metadata to disk.
 
 Takes no argument. 
 Makes sure file does not have a meta file associated with it.
+
+=head2 move()
+
+argument is new dir to move to, or new destination
+
+	$f->move('/home/myself/newdocs');
+
+If the destination is a dir, the file or dir will be moved there
+If it is a file, it will not move and carp that it already exists.
+note that after moving or renaming, the other file info is automatically
+updated, such as abs_loc() and rel_path() etc.
+	
 
 =head2 rename()
 

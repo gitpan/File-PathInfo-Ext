@@ -6,7 +6,6 @@ use Cwd;
 use warnings;
 use Carp;
 use Cwd;
-use Smart::Comments '###';
 File::PathInfo::RESOLVE_SYMLINKS = 0;
 File::PathInfo::Ext::DEBUG = 1;
 $ENV{DOCUMENT_ROOT} = cwd().'/t/public_html';
