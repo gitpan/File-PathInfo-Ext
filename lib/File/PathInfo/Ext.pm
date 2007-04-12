@@ -2,7 +2,7 @@ package File::PathInfo::Ext;
 use base 'File::PathInfo';
 use strict;
 use warnings;
-use File::Copy;
+#use File::Copy;
 use YAML;
 use Carp;
 =pod
@@ -42,7 +42,7 @@ These are added methods to the usual L<File::PathInfo> methods.
 =cut
 
 #use vars qw($VERSION);
-our $VERSION = sprintf "%d.%02d", q$Revision: 1.7 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%02d", q$Revision: 1.8 $ =~ /(\d+)/g;
 
 # extended, with metadata
 my $DEBUG=0; sub DEBUG : lvalue { $DEBUG }
@@ -89,6 +89,7 @@ sub rename {
 
 sub move {
 	my ($self, $to) =(shift, shift);
+	require File::Copy; # using this in the package headers was causing a warning,, move redefined.. bla bla.. it is quite annoying to export by default
 	print STDERR __PACKAGE__."::move called [$to]\n" if DEBUG;
 
 	my $from_loc = $self->abs_loc or die;

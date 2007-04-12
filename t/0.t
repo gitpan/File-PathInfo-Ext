@@ -6,7 +6,7 @@ use Cwd;
 use warnings;
 use Carp;
 File::PathInfo::RESOLVE_SYMLINKS =0;
-File::PathInfo::Ext::DEBUG =1;
+File::PathInfo::Ext::DEBUG =0;
 
 $ENV{DOCUMENT_ROOT} = cwd().'/t/public_html';
 
