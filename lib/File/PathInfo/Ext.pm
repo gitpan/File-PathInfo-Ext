@@ -5,6 +5,7 @@ use warnings;
 #use File::Copy;
 use YAML;
 use Carp;
+
 =pod
 
 =head1 NAME
@@ -30,8 +31,8 @@ File::PathInfo::Ext - metadata files, renaming, some other things on top of Path
 =head1 DESCRIPTION
 
 This extends File::PathInfo.
-Added is a simple api for YAML metadata files. Also a way to rename the file, and 
-maintain the metadata file (YAML file).
+Added is a simple api for YAML metadata files associated to the file the object instance is based on.
+Also a way to rename the file, and move the file- maintaining the metadata YAML file association.
 
 This software is still under development.
 
@@ -42,7 +43,7 @@ These are added methods to the usual L<File::PathInfo> methods.
 =cut
 
 #use vars qw($VERSION);
-our $VERSION = sprintf "%d.%02d", q$Revision: 1.8 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%02d", q$Revision: 1.9 $ =~ /(\d+)/g;
 
 # extended, with metadata
 my $DEBUG=0; sub DEBUG : lvalue { $DEBUG }
@@ -89,15 +90,17 @@ sub rename {
 
 sub move {
 	my ($self, $to) =(shift, shift);
-	require File::Copy; # using this in the package headers was causing a warning,, move redefined.. bla bla.. it is quite annoying to export by default
+	require File::Copy; 
+		# using this in the package headers was causing a warning,
+		# move redefined.. bla bla.. it is quite annoying to export by default
 	print STDERR __PACKAGE__."::move called [$to]\n" if DEBUG;
-
-	my $from_loc = $self->abs_loc or die;
-	my $filename = $self->filename or die;
+	my $from_loc = $self->abs_loc or croak('move() dont have abs_loc yet, set must have failed.');
+	my $filename = $self->filename or croak('move() dont have filename yet, set must have failed.');
 	
-	if (-d $to){
-		print STDERR "move 'to' is a dir, will move there. " if DEBUG;
-		$to.='/'.$filename;
+	# is the argument /a/dir/tomove/to/ ?
+	if ($to=~/\/$/ and -d $to){
+		$to.=$filename;
+		print STDERR "move() argument was a dir, destination will be [$to]. " if DEBUG;		
 	}
 
 	if (-e $to){
@@ -105,8 +108,8 @@ sub move {
 		return 0;
 	}
 
-	print STDERR "from $from_loc/$filename\nto $to\n" if DEBUG;
 
+	# by now if arg was /a/path/2dir/ the filename was already appended
 	my $to_loc= $to;
 	$to_loc=~s/\/[^\/]+$//;
 	
@@ -118,12 +121,15 @@ sub move {
 	}	
 	print STDERR "moved [$from_loc/$filename]to [$to]\n" if DEBUG;
 		
-	File::Copy::mv("$from_loc/.$filename.".META_EXT, "$to_loc/.$filename.".META_EXT );
-	File::Copy::mv("$from_loc/$filename.".META_EXT, "$to_loc/$filename.".META_EXT );
+	# yea i know, if we havea '.file.ext' and a 'file.ext', they cannot both have meta.
+	if (
+		File::Copy::mv("$from_loc/.$filename.".META_EXT, "$to_loc/.$filename.".META_EXT ) or 
+		File::Copy::mv("$from_loc/$filename.".META_EXT, "$to_loc/$filename.".META_EXT ) ){
+		
+		print STDERR "moved meta\n"if DEBUG;
+	}	
 
-	print STDERR "moved meta\n"if DEBUG;
-
-	$self->set($to) or die("cant set to [$to] after moving, $!");
+	$self->set($to) or confess("moved [$from_loc/$filename]to [$to] but cant set() after moving, $!");
 	return 1;
 }
 
@@ -345,19 +351,26 @@ Makes sure file does not have a meta file associated with it.
 
 =head2 move()
 
-argument is new dir to move to, or new destination
+argument is absolute path to a directory to move to
+or argument is absolute destination of where to move to.
 
-	$f->move('/home/myself/newdocs');
-
-If the destination is a dir, the file or dir will be moved there
-If it is a file, it will not move and carp that it already exists.
-note that after moving or renaming, the other file info is automatically
-updated, such as abs_loc() and rel_path() etc.
+	$f->move('/home/myself/newdocs/');
 	
+	$f->move('/home/myself/newdocs/great.pdf');
+	
+If a trailing slash is present, then it is checked if it is a directory,
+and the file is move there.
+
+If the destination exists, it will not move and carp that it already exists,
+returns false.
+(Note that after moving or renaming, the other file info is automatically
+updated, such as abs_loc() and rel_path() etc.)
+The meta file is moved also if it exists. That is part why one would consider using
+this move instead of File::Copy::move.
 
 =head2 rename()
 
-Argument is new filename.
+Argument is new filename. New filename cannot have /\ characters, etc.
 This rename makes it so if you have a meta file, it is renamed also.
 
 	$f->rename('blah') or die'cant rename';
@@ -485,7 +498,7 @@ This is just to assure a file does not have metadata anymore.
 
 =head1 SEE ALSO
 
-See also L<File::PathInfo>, L<YAML>, and L<File::Attributes>.
+See also L<File::PathInfo>, L<YAML>, L<File::Attributes>, L<File::Copy>.
 
 =head1 PACKAGE SETTINGS
 

@@ -59,37 +59,3 @@ demo/civil.txt
 
 }
 
-my $x = new File::PathInfo::Ext;
-
-mkdir $ENV{DOCUMENT_ROOT}.'/timp';
-# test ones we know are in docroot
-for (qw(
-./demo ./demo/hellokitty.gif ./demo/civil.txt
-
-
-)){
-
-
-#./demo ./demo/hellokitty.gif ./demo/civil.txt
-
-
-
-	my $rel = $_;
-	
-	$x->set($ENV{DOCUMENT_ROOT}."/$rel");
-	
-	$x->meta->{var} = 'yes';
-	
-	ok( $x->move($ENV{DOCUMENT_ROOT}.'/timp'),'move' );
-
-	ok( !(-f $ENV{DOCUMENT_ROOT}."/$rel"),'gone ok' );
-
-	ok($x->abs_loc eq $ENV{DOCUMENT_ROOT}.'/timp');
-
-	ok($x->meta->{var} eq 'yes');
-
-	ok($x->move("$ENV{DOCUMENT_ROOT}/$rel"),"move back to $rel");
-
-}
-
-
