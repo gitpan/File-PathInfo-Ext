@@ -43,7 +43,7 @@ These are added methods to the usual L<File::PathInfo> methods.
 =cut
 
 #use vars qw($VERSION);
-our $VERSION = sprintf "%d.%02d", q$Revision: 1.9 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%02d", q$Revision: 1.13 $ =~ /(\d+)/g;
 
 # extended, with metadata
 my $DEBUG=0; sub DEBUG : lvalue { $DEBUG }
@@ -100,7 +100,7 @@ sub move {
 	# is the argument /a/dir/tomove/to/ ?
 	if ($to=~/\/$/ and -d $to){
 		$to.=$filename;
-		print STDERR "move() argument was a dir, destination will be [$to]. " if DEBUG;		
+		print STDERR __PACKAGE__."::move() argument was a dir, destination will be [$to]. " if DEBUG;
 	}
 
 	if (-e $to){
@@ -113,24 +113,25 @@ sub move {
 	my $to_loc= $to;
 	$to_loc=~s/\/[^\/]+$//;
 	
-	-d $to_loc or carp __PACKAGE__."::move() [$from_loc/$filename] to [$to] failed, [$to_loc] is not a directory." and return 0;
+	-d $to_loc or carp ( __PACKAGE__."::move() [$from_loc/$filename] to [$to] failed,"
+	." [$to_loc] is not a directory.") and return 0;
 	
 	unless( File::Copy::mv( "$from_loc/$filename", $to)){
-		carp ("cant move [$from_loc/$filename] to [$to], $! - check permissions?");
+		carp (__PACKAGE__."::move() cannot move [$from_loc/$filename] to [$to], $! - check permissions?");
 		return 0;
 	}	
-	print STDERR "moved [$from_loc/$filename]to [$to]\n" if DEBUG;
+	print STDERR __PACKAGE__. "::move() moved [$from_loc/$filename]to [$to]\n" if DEBUG;
 		
 	# yea i know, if we havea '.file.ext' and a 'file.ext', they cannot both have meta.
 	if (
 		File::Copy::mv("$from_loc/.$filename.".META_EXT, "$to_loc/.$filename.".META_EXT ) or 
 		File::Copy::mv("$from_loc/$filename.".META_EXT, "$to_loc/$filename.".META_EXT ) ){
 		
-		print STDERR "moved meta\n"if DEBUG;
+		print STDERR __PACKAGE__."::move() moved meta\n"if DEBUG;
 	}	
 
-	$self->set($to) or confess("moved [$from_loc/$filename]to [$to] but cant set() after moving, $!");
-	return 1;
+	$self->set($to) or confess(__PACKAGE__."::move() moved [$from_loc/$filename]to [$to] but cant set() after moving, $!");
+	return $to;
 }
 
 
@@ -186,6 +187,7 @@ sub lsa {
 	return \@ls;
 }
 
+
 =head2 ls() and lsa()
 
 takes no argument
@@ -238,6 +240,26 @@ sub lsda {
 	return \@ls;
 }
 
+sub ls_count {
+	my $self = shift;
+	$self->is_dir or return;
+	my $count = scalar @{$self->ls};
+	return $count;
+}
+
+sub lsd_count {
+	my $self = shift;
+	$self->is_dir or return;
+	my $count = scalar @{$self->lsd};
+	return $count;
+}
+
+sub lsf_count {
+	my $self = shift;
+	$self->is_dir or return;
+	my $count = scalar @{$self->lsf};
+	return $count;
+}
 
 =head2 lsd() and lsda()
 
@@ -245,6 +267,18 @@ returns array ref of dirs (-d) in dir.
 returns undef if it's not a dir.
 
 lsda() returns absolute paths, not just filename.
+
+=head2 ls_count()
+
+number of entries in directory, returns undef if not a dir
+
+=head2 lsd_count()
+
+number of directory entries in directory, returns undef if not a dir
+
+=head2 lsf_count()
+
+number of file entries in directory, returns undef if not a dir
 
 =cut
 
@@ -331,6 +365,7 @@ sub get_datahash {
 }
 
 
+
 =pod
 
 =head2 meta()
@@ -367,6 +402,8 @@ returns false.
 updated, such as abs_loc() and rel_path() etc.)
 The meta file is moved also if it exists. That is part why one would consider using
 this move instead of File::Copy::move.
+
+returns abs path of where the file moved to
 
 =head2 rename()
 
@@ -495,6 +532,49 @@ will delete hidden as well as non-hidden meta.
 
 Deletes /home/myself/document.meta and /home/myself/.document.meta
 This is just to assure a file does not have metadata anymore.
+
+
+=cut
+
+=head1 DIGEST
+
+=cut
+
+sub md5_hex {
+	my $self = shift;
+	$self->is_file or warn(sprintf "md5() doesnt worlk for dirs: %s",$self->abs_path) and return;
+	
+	unless( exists $self->{_data}->{md5_hex}){
+		require Digest::MD5::File;
+		my $file = $self->abs_path;
+
+		my $sum = Digest::MD5::File::file_md5_hex($file);
+
+		$sum ||=undef;
+		$sum or warn("cant get md5sum of $file");
+		$self->{_data}->{md5_hex} = $sum;
+		
+	}
+	return $self->{_data}->{md5_hex};
+}
+
+=head2 md5_hex()
+
+returns md5 sum of file contents, cached in object {_data}
+if getting the md5sum digest does not work, returns undef
+see L<Digest::MD5::File>
+
+=cut
+
+
+
+
+
+
+
+
+
+
 
 =head1 SEE ALSO
 

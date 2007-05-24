@@ -14,6 +14,7 @@ $ENV{DOCUMENT_ROOT} = cwd().'/t/public_html';
 # test ones we know are in docroot
 for (qw(
 ./t/public_html/demo
+./t/public_html/seven.pdf
 demo
 ./t/public_html/demo/hellokitty.gif
 ./t/public_html/demo/../demo/civil.txt
@@ -57,5 +58,11 @@ demo/civil.txt
 		ok($f->$_);
 	}
 
+
+	if ($f->is_file){
+		my $digest;
+		
+		ok($digest = $f->md5_hex, (sprintf "got md5: %s %s",$f->abs_path,$digest));
+	}
 }
 

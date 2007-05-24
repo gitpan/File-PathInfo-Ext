@@ -3,6 +3,7 @@ lib/File/PathInfo/Ext.pm
 t/0.t
 t/1.t
 t/public_html/demo/civil.txt
+t/public_html/seven.pdf
 t/public_html/demo/hellokitty.gif
 t/public_html/house.txt
 t/public_html/oake.jpg
