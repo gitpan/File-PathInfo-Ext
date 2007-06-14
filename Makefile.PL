@@ -6,5 +6,6 @@ WriteMakefile(
 		'File::PathInfo' => '1.12',
 		YAML => 0,
 		'File::Path' => 0,
+		'Digest::MD5' => 0,
 	},
 ); 

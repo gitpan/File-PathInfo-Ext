@@ -43,7 +43,7 @@ These are added methods to the usual L<File::PathInfo> methods.
 =cut
 
 #use vars qw($VERSION);
-our $VERSION = sprintf "%d.%02d", q$Revision: 1.13 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%02d", q$Revision: 1.16 $ =~ /(\d+)/g;
 
 # extended, with metadata
 my $DEBUG=0; sub DEBUG : lvalue { $DEBUG }
@@ -60,8 +60,13 @@ sub rename {
 	
 	print STDERR __PACKAGE__."::rename called\n" if DEBUG;
 
+	if ( -e  $self->abs_loc ."/$newname" ){
+		carp(sprintf "cannot rename %s to %s, detination already exists.", $self->abs_path, $self->abs_loc ."/$newname");
+		return 0;
+	}
+
 	unless( rename( $self->abs_path, $self->abs_loc ."/$newname")){
-		carp ('cant rename '.$self->abs_path .' to '.$self->abs_loc ."/$newname, $!");
+		carp (__PACKAGE__.'::rename() cant rename '.$self->abs_path .' to '.$self->abs_loc ."/$newname, $!");
 		return 0;
 	}	
 	# rename meta
@@ -98,9 +103,15 @@ sub move {
 	my $filename = $self->filename or croak('move() dont have filename yet, set must have failed.');
 	
 	# is the argument /a/dir/tomove/to/ ?
-	if ($to=~/\/$/ and -d $to){
-		$to.=$filename;
-		print STDERR __PACKAGE__."::move() argument was a dir, destination will be [$to]. " if DEBUG;
+	if ($to=~s/\/$//){
+		if (-d $to){
+			$to.="/$filename";
+			print STDERR __PACKAGE__."::move() argument was a dir, destination will be [$to]. " if DEBUG;			
+		}
+		else {		
+			carp("move() argument eneded in a slash, this means you want to move it to at dir, but [$to] is not a dir");
+			return 0;		
+		}
 	}
 
 	if (-e $to){
@@ -412,6 +423,10 @@ This rename makes it so if you have a meta file, it is renamed also.
 
 	$f->rename('blah') or die'cant rename';
 
+If the file you are renaming to already exists, a carps and returns false. It will not
+overrite an existing file. You must first delete the exisitng file or rename to something else.
+
+
 =head1 USAGE EXAMPLES
 
 I adore this little module. I use it a lot.
@@ -545,10 +560,10 @@ sub md5_hex {
 	$self->is_file or warn(sprintf "md5() doesnt worlk for dirs: %s",$self->abs_path) and return;
 	
 	unless( exists $self->{_data}->{md5_hex}){
-		require Digest::MD5::File;
+		require Digest::MD5;
 		my $file = $self->abs_path;
 
-		my $sum = Digest::MD5::File::file_md5_hex($file);
+		my $sum = Digest::MD5::md5_hex($file);
 
 		$sum ||=undef;
 		$sum or warn("cant get md5sum of $file");
@@ -562,7 +577,7 @@ sub md5_hex {
 
 returns md5 sum of file contents, cached in object {_data}
 if getting the md5sum digest does not work, returns undef
-see L<Digest::MD5::File>
+see L<Digest::MD5>
 
 =cut
 
