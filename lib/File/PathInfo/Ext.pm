@@ -2,48 +2,9 @@ package File::PathInfo::Ext;
 use base 'File::PathInfo';
 use strict;
 use warnings;
-#use File::Copy;
-use YAML;
 use Carp;
-
-=pod
-
-=head1 NAME
-
-File::PathInfo::Ext - metadata files, renaming, some other things on top of PathInfo
-
-=head1 SYNOPSIS
-
-	use File::PathInfo::Ext;
-
-	my $f = new File::PathInfo::Ext('/home/myself/thisfile.pdf');
-
-	$f->meta_save({ keywords => 'salt, pepper, lemon, ginger' });
-
-	printf "keywords are: %s\n", $f->meta->{keywords};
-
-	$f->rename('thatfile.pdf');
-
-	printf "filename is now %s\n", $f->filename;
-	printf "keywords are still: %s\n", $f->meta->{keywords};	
-	
-
-=head1 DESCRIPTION
-
-This extends File::PathInfo.
-Added is a simple api for YAML metadata files associated to the file the object instance is based on.
-Also a way to rename the file, and move the file- maintaining the metadata YAML file association.
-
-This software is still under development.
-
-=head1 METHODS
-
-These are added methods to the usual L<File::PathInfo> methods.
-
-=cut
-
-#use vars qw($VERSION);
-our $VERSION = sprintf "%d.%02d", q$Revision: 1.16 $ =~ /(\d+)/g;
+use vars qw($VERSION);
+$VERSION = sprintf "%d.%02d", q$Revision: 1.20 $ =~ /(\d+)/g;
 
 # extended, with metadata
 my $DEBUG=0; sub DEBUG : lvalue { $DEBUG }
@@ -51,9 +12,6 @@ my $META_HIDDEN=1; sub META_HIDDEN : lvalue { $META_HIDDEN }
 my $META_EXT = 'meta'; sub META_EXT : lvalue { $META_EXT }
 
 # TODO : rename must be able to fix up metadata
-
-
-
 
 sub rename {
 	my ($self, $newname) =(shift, shift);
@@ -99,20 +57,33 @@ sub move {
 		# using this in the package headers was causing a warning,
 		# move redefined.. bla bla.. it is quite annoying to export by default
 	print STDERR __PACKAGE__."::move called [$to]\n" if DEBUG;
-	my $from_loc = $self->abs_loc or croak('move() dont have abs_loc yet, set must have failed.');
-	my $filename = $self->filename or croak('move() dont have filename yet, set must have failed.');
+	my $from_loc = $self->abs_loc 
+      or croak('move() dont have abs_loc yet, set must have failed.');
+	my $filename = $self->filename or 
+      croak('move() dont have filename yet, set must have failed.');
+
 	
 	# is the argument /a/dir/tomove/to/ ?
 	if ($to=~s/\/$//){
 		if (-d $to){
 			$to.="/$filename";
-			print STDERR __PACKAGE__."::move() argument was a dir, destination will be [$to]. " if DEBUG;			
+			print STDERR __PACKAGE__."::move() argument was a dir, destination will be [$to]. " 
+            if DEBUG;			
 		}
 		else {		
-			carp("move() argument eneded in a slash, this means you want to move it to at dir, but [$to] is not a dir");
+			carp("move() argument eneded in a slash, this means you want to move "
+         ."it to at dir, but [$to] is not a dir");
 			return 0;		
 		}
 	}
+
+   # is destination same as source
+   require Cwd;
+   if ( Cwd::abs_path("$from_loc/$filename") eq $to ){
+      print STDERR "[$from_loc/$filename] source and destination are the same\n";
+      return $to;
+   }
+
 
 	if (-e $to){
 		carp __PACKAGE__."::move() [$from_loc/$filename] to [$to] failed, already exists.";
@@ -128,7 +99,8 @@ sub move {
 	." [$to_loc] is not a directory.") and return 0;
 	
 	unless( File::Copy::mv( "$from_loc/$filename", $to)){
-		carp (__PACKAGE__."::move() cannot move [$from_loc/$filename] to [$to], $! - check permissions?");
+		carp (__PACKAGE__."::move() cannot move [$from_loc/$filename] to [$to],"
+      ."$! - check permissions?");
 		return 0;
 	}	
 	print STDERR __PACKAGE__. "::move() moved [$from_loc/$filename]to [$to]\n" if DEBUG;
@@ -137,11 +109,12 @@ sub move {
 	if (
 		File::Copy::mv("$from_loc/.$filename.".META_EXT, "$to_loc/.$filename.".META_EXT ) or 
 		File::Copy::mv("$from_loc/$filename.".META_EXT, "$to_loc/$filename.".META_EXT ) ){
-		
 		print STDERR __PACKAGE__."::move() moved meta\n"if DEBUG;
 	}	
 
-	$self->set($to) or confess(__PACKAGE__."::move() moved [$from_loc/$filename]to [$to] but cant set() after moving, $!");
+	$self->set($to) 
+      or confess(__PACKAGE__."::move() moved [$from_loc/$filename]to [$to]"
+      ." but cant set() after moving, $!");
 	return $to;
 }
 
@@ -199,15 +172,6 @@ sub lsa {
 }
 
 
-=head2 ls() and lsa()
-
-takes no argument
-returns array ref of files (and dirs and everything else). No . and ..
-returns undef if it's not a dir
-
-lsa() returns absolute paths, not just filename.
-
-=cut
 
 sub lsf {
 	my $self = shift;	
@@ -226,14 +190,6 @@ sub lsfa {
 }
 
 
-=head2 lsf() and lsfa()
-
-returns array ref of files (-f) in dir. 
-returns undef if it's not a dir.
-
-lsfa() returns absolute paths, not just filename.
-
-=cut 
 
 sub lsd {
 	my $self = shift;	
@@ -271,30 +227,6 @@ sub lsf_count {
 	my $count = scalar @{$self->lsf};
 	return $count;
 }
-
-=head2 lsd() and lsda()
-
-returns array ref of dirs (-d) in dir. 
-returns undef if it's not a dir.
-
-lsda() returns absolute paths, not just filename.
-
-=head2 ls_count()
-
-number of entries in directory, returns undef if not a dir
-
-=head2 lsd_count()
-
-number of directory entries in directory, returns undef if not a dir
-
-=head2 lsf_count()
-
-number of file entries in directory, returns undef if not a dir
-
-=cut
-
-
-
 
 
 
@@ -336,6 +268,7 @@ sub set_meta {
 	}
 	
 	$abs_path=~s/^(.+\/)([^\/]+$)/$1.$2/ if META_HIDDEN;	
+   require YAML;
 	YAML::DumpFile($abs_path .'.'.META_EXT,$meta);	
 	return 1;
 }
@@ -375,8 +308,133 @@ sub get_datahash {
 	
 }
 
+sub md5_hex {
+	my $self = shift;
+	$self->is_file 
+      or warn(sprintf "md5() doesnt worlk for dirs: %s",$self->abs_path) 
+      and return;
+	
+	unless( exists $self->{_data}->{md5_hex}){
+		require Digest::MD5;
+		my $file = $self->abs_path;
+
+		my $sum = Digest::MD5::md5_hex($file);
+
+		$sum ||=undef;
+		$sum or warn("cant get md5sum of $file");
+		$self->{_data}->{md5_hex} = $sum;
+		
+	}
+	return $self->{_data}->{md5_hex};
+}
+
+sub mime_type {
+   my $self = shift;
+   unless( exists $self->{_data}->{mime_type} ){
+      require File::Type;
+      my $mm = new File::Type;
+
+      my $res = $mm->checktype_filename($self->abs_path);
+      #my $res = $mm->mime_type($self->abs_path);
+      $self->{_data}->{mime_type} = $res;
+
+   }
+   return $self->{_data}->{mime_type};
+
+}
 
 
+
+1;
+
+
+
+
+__END__
+
+
+
+
+
+
+
+
+
+
+
+
+=pod
+
+=head1 NAME
+
+File::PathInfo::Ext - metadata files, renaming, some other things on top of PathInfo
+
+=head1 SYNOPSIS
+
+	use File::PathInfo::Ext;
+
+	my $f = new File::PathInfo::Ext('/home/myself/thisfile.pdf');
+
+	$f->meta_save({ keywords => 'salt, pepper, lemon, ginger' });
+
+	printf "keywords are: %s\n", $f->meta->{keywords};
+
+	$f->rename('thatfile.pdf');
+
+	printf "filename is now %s\n", $f->filename;
+	printf "keywords are still: %s\n", $f->meta->{keywords};	
+	
+
+=head1 DESCRIPTION
+
+This extends File::PathInfo.
+Added is a simple api for YAML metadata files associated to the file the object instance is based on.
+Also a way to rename the file, and move the file- maintaining the metadata YAML file association.
+
+This software is still under development.
+
+=head1 METHODS
+
+These are added methods to the usual L<File::PathInfo> methods.
+
+=cut
+=head2 ls() and lsa()
+
+takes no argument
+returns array ref of files (and dirs and everything else). No . and ..
+returns undef if it's not a dir
+
+lsa() returns absolute paths, not just filename.
+
+=cut
+=head2 lsf() and lsfa()
+
+returns array ref of files (-f) in dir. 
+returns undef if it's not a dir.
+
+lsfa() returns absolute paths, not just filename.
+
+=cut 
+=head2 lsd() and lsda()
+
+returns array ref of dirs (-d) in dir. 
+returns undef if it's not a dir.
+
+lsda() returns absolute paths, not just filename.
+
+=head2 ls_count()
+
+number of entries in directory, returns undef if not a dir
+
+=head2 lsd_count()
+
+number of directory entries in directory, returns undef if not a dir
+
+=head2 lsf_count()
+
+number of file entries in directory, returns undef if not a dir
+
+=cut
 =pod
 
 =head2 meta()
@@ -554,25 +612,6 @@ This is just to assure a file does not have metadata anymore.
 =head1 DIGEST
 
 =cut
-
-sub md5_hex {
-	my $self = shift;
-	$self->is_file or warn(sprintf "md5() doesnt worlk for dirs: %s",$self->abs_path) and return;
-	
-	unless( exists $self->{_data}->{md5_hex}){
-		require Digest::MD5;
-		my $file = $self->abs_path;
-
-		my $sum = Digest::MD5::md5_hex($file);
-
-		$sum ||=undef;
-		$sum or warn("cant get md5sum of $file");
-		$self->{_data}->{md5_hex} = $sum;
-		
-	}
-	return $self->{_data}->{md5_hex};
-}
-
 =head2 md5_hex()
 
 returns md5 sum of file contents, cached in object {_data}
@@ -580,12 +619,6 @@ if getting the md5sum digest does not work, returns undef
 see L<Digest::MD5>
 
 =cut
-
-
-
-
-
-
 
 
 
@@ -620,5 +653,4 @@ Leo Charre leocharre at cpan dot org
 	
 =cut
 
-1;
-
+1

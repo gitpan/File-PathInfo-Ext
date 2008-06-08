@@ -1,4 +1,6 @@
+if( $^O=~/mswin32/i ){ die("Operating System Unsupported."); }
 use ExtUtils::MakeMaker;
+
 WriteMakefile(
 	NAME => 'File::PathInfo::Ext',
 	VERSION_FROM => 'lib/File/PathInfo/Ext.pm',

@@ -10,9 +10,16 @@ File::PathInfo::Ext::DEBUG =0;
 
 $ENV{DOCUMENT_ROOT} = cwd().'/t/public_html';
 
+my $i = 0;
+
+sub ok_part {
+   printf STDERR "\n\n===================\nPART [%s], %s\n\n", ++$i, uc(+shift);
+   return 1;
+}
+
 
 # test ones we know are in docroot
-for (qw(
+for my $argument (qw(
 ./t/public_html/demo
 ./t/public_html/seven.pdf
 demo
@@ -21,11 +28,10 @@ demo
 demo/../demo/civil.txt
 demo/civil.txt
 )){
-	
-	my $argument = $_;
+	ok_part($argument);
 	my $f = new File::PathInfo::Ext($argument) ;#or die( $File::PathInfo::Ext::errstr );
 
-	ok($f);
+	#ok($f, "instanced for '$argument'");
 	my $filename = $f->filename;
 
 	$f->meta->{title} = 'hello';
@@ -43,19 +49,19 @@ demo/civil.txt
 
 	# rename back
 
-	$f->rename($filename);
+	ok( $f->rename($filename) ,'meta rename');
 
 	
 	
 
 	
 	
-	$f->meta_delete;
+	ok( $f->meta_delete ,'meta delete');
 	
 	ok( !(-f $f->abs_loc.'/.'.$f->filename .'.meta'),'meta gone');
 
-	for (qw(ctime mtime nlink size blocks atime_pretty mtime_pretty ctime_pretty ino)){		
-		ok($f->$_);
+	for my $stat_key (qw(ctime mtime nlink size blocks atime_pretty mtime_pretty ctime_pretty ino)){		
+		ok($f->$stat_key, "stat key method  '$stat_key()'") ;
 	}
 
 
@@ -63,6 +69,14 @@ demo/civil.txt
 		my $digest;
 		
 		ok($digest = $f->md5_hex, (sprintf "got md5: %s %s",$f->abs_path,$digest));
+
+
+      my $mime = $f->mime_type;
+      ok($mime, "mime is $mime");
+
 	}
+
+   
+
 }
 
