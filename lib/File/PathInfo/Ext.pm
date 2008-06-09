@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = sprintf "%d.%02d", q$Revision: 1.20 $ =~ /(\d+)/g;
+$VERSION = sprintf "%d.%02d", q$Revision: 1.21 $ =~ /(\d+)/g;
 
 # extended, with metadata
 my $DEBUG=0; sub DEBUG : lvalue { $DEBUG }
@@ -12,40 +12,49 @@ my $META_HIDDEN=1; sub META_HIDDEN : lvalue { $META_HIDDEN }
 my $META_EXT = 'meta'; sub META_EXT : lvalue { $META_EXT }
 
 # TODO : rename must be able to fix up metadata
+# 
+sub debug { print STDERR __PACKAGE__.": @_\n" if DEBUG; return 1; }
 
 sub rename {
 	my ($self, $newname) =(shift, shift);
 	
-	print STDERR __PACKAGE__."::rename called\n" if DEBUG;
+   debug('rename called');
 
-	if ( -e  $self->abs_loc ."/$newname" ){
-		carp(sprintf "cannot rename %s to %s, detination already exists.", $self->abs_path, $self->abs_loc ."/$newname");
+   my $abs_path = $self->abs_path;
+   my $abs_path_new = $self->abs_loc."/$newname";
+
+	if ( -e  $abs_path_new ){
+		carp(sprintf "cannot rename %s to %s, detination already exists.", 
+         $abs_path, $abs_path_new );
 		return 0;
 	}
 
-	unless( rename( $self->abs_path, $self->abs_loc ."/$newname")){
-		carp (__PACKAGE__.'::rename() cant rename '.$self->abs_path .' to '.$self->abs_loc ."/$newname, $!");
+	unless( rename($abs_path, $abs_path_new) ){
+		carp("cant rename $abs_path to $abs_path_new, destinaton exists.");
 		return 0;
 	}	
+
 	# rename meta
 	my $to;
-#	my $to = $self->abs_loc . ( META_HIDDEN ? "/.$newname." : "/$newname." ) . META_EXT; # THIS CRASHES, why????
+   #	my $to = $self->abs_loc . ( META_HIDDEN ? "/.$newname." : "/$newname." ) . 
+   #	META_EXT; # THIS CRASHES, why????
 
 	if (META_HIDDEN){
 		$to =  $self->abs_loc . "/.$newname.". META_EXT;
 	}
 	else {
-		$to =  $self->abs_loc . "/$newname.". META_EXT;
+		$to =  $self->abs_loc . "/$newname.".  META_EXT;
 	}
 	
-	print STDERR "meta renamed to [$to]\n" if DEBUG;
+   debug("meta renamed to $to");
 
-	# both hidden and non hidden
+	# both hidden and non hidden... hmmm 
+   # TODO inspect this
 	rename( $self->abs_loc .'/.'.$self->filename . '.' . META_EXT,  $to );
 	rename( $self->abs_loc .'/' .$self->filename . '.' . META_EXT,  $to );
 
-	$self->set($self->abs_loc .'/'.$newname) or die($!);
-	return 1;
+	$self->set($abs_path_new) or die($!);
+	return $abs_path_new;
 }
 
 
@@ -53,22 +62,23 @@ sub rename {
 
 sub move {
 	my ($self, $to) =(shift, shift);
+
 	require File::Copy; 
 		# using this in the package headers was causing a warning,
 		# move redefined.. bla bla.. it is quite annoying to export by default
-	print STDERR __PACKAGE__."::move called [$to]\n" if DEBUG;
+	debug("move() called [$to]");
+
 	my $from_loc = $self->abs_loc 
       or croak('move() dont have abs_loc yet, set must have failed.');
-	my $filename = $self->filename or 
-      croak('move() dont have filename yet, set must have failed.');
+	my $filename = $self->filename
+      or croak('move() dont have filename yet, set must have failed.');
 
 	
 	# is the argument /a/dir/tomove/to/ ?
 	if ($to=~s/\/$//){
 		if (-d $to){
 			$to.="/$filename";
-			print STDERR __PACKAGE__."::move() argument was a dir, destination will be [$to]. " 
-            if DEBUG;			
+         debug("move() argument was a dir, destination will be [$to]");
 		}
 		else {		
 			carp("move() argument eneded in a slash, this means you want to move "
@@ -80,7 +90,7 @@ sub move {
    # is destination same as source
    require Cwd;
    if ( Cwd::abs_path("$from_loc/$filename") eq $to ){
-      print STDERR "[$from_loc/$filename] source and destination are the same\n";
+      debug("[$from_loc/$filename] source and destination are the same.");
       return $to;
    }
 
@@ -95,21 +105,24 @@ sub move {
 	my $to_loc= $to;
 	$to_loc=~s/\/[^\/]+$//;
 	
-	-d $to_loc or carp ( __PACKAGE__."::move() [$from_loc/$filename] to [$to] failed,"
-	." [$to_loc] is not a directory.") and return 0;
+	unless( -d $to_loc ){ 
+      carp ( __PACKAGE__."::move() [$from_loc/$filename] to [$to] failed,"
+	   ." [$to_loc] is not a directory.") ;
+      return 0;
+   }
 	
 	unless( File::Copy::mv( "$from_loc/$filename", $to)){
 		carp (__PACKAGE__."::move() cannot move [$from_loc/$filename] to [$to],"
       ."$! - check permissions?");
 		return 0;
 	}	
-	print STDERR __PACKAGE__. "::move() moved [$from_loc/$filename]to [$to]\n" if DEBUG;
+   debug("move() moved [$from_loc/$filename]to [$to]");
 		
 	# yea i know, if we havea '.file.ext' and a 'file.ext', they cannot both have meta.
 	if (
 		File::Copy::mv("$from_loc/.$filename.".META_EXT, "$to_loc/.$filename.".META_EXT ) or 
 		File::Copy::mv("$from_loc/$filename.".META_EXT, "$to_loc/$filename.".META_EXT ) ){
-		print STDERR __PACKAGE__."::move() moved meta\n"if DEBUG;
+		debug("move() moved meta.");
 	}	
 
 	$self->set($to) 
@@ -117,9 +130,6 @@ sub move {
       ." but cant set() after moving, $!");
 	return $to;
 }
-
-
-
 
 
 sub meta {
@@ -171,8 +181,6 @@ sub lsa {
 	return \@ls;
 }
 
-
-
 sub lsf {
 	my $self = shift;	
 	$self->is_dir or return;	
@@ -188,8 +196,6 @@ sub lsfa {
 	my @ls; for (@{$self->lsf}){ push @ls, $self->abs_path.'/'.$_;	}
 	return \@ls;
 }
-
-
 
 sub lsd {
 	my $self = shift;	
@@ -239,18 +245,18 @@ sub get_meta {
 	META_EXT or croak('META_EXT must have a value');
 
 	if( -f $abs_path.'.'.META_EXT){
-			my $meta = YAML::LoadFile( $abs_path.'.'.META_EXT );   
-			return $meta;
+			return YAML::LoadFile( $abs_path.'.'.META_EXT );
 	}
 	
 	# try hidden
 	my $abs_meta = $abs_path;
 	$abs_meta=~s/\/([^\/]+)$/\/.$1./;
 	$abs_meta.= META_EXT;
-	print STDERR "searching for [$abs_meta]\n" if DEBUG;
+
+	debug("Searching for [$abs_meta]");
+
 	if (-f $abs_meta) {
-			my $meta = YAML::LoadFile( $abs_meta );
-			return $meta;
+			return YAML::LoadFile( $abs_meta );
 	}
 	return;
 }
@@ -348,20 +354,7 @@ sub mime_type {
 1;
 
 
-
-
 __END__
-
-
-
-
-
-
-
-
-
-
-
 
 =pod
 
@@ -397,7 +390,6 @@ This software is still under development.
 
 These are added methods to the usual L<File::PathInfo> methods.
 
-=cut
 =head2 ls() and lsa()
 
 takes no argument
@@ -406,7 +398,6 @@ returns undef if it's not a dir
 
 lsa() returns absolute paths, not just filename.
 
-=cut
 =head2 lsf() and lsfa()
 
 returns array ref of files (-f) in dir. 
@@ -414,7 +405,6 @@ returns undef if it's not a dir.
 
 lsfa() returns absolute paths, not just filename.
 
-=cut 
 =head2 lsd() and lsda()
 
 returns array ref of dirs (-d) in dir. 
@@ -434,8 +424,6 @@ number of directory entries in directory, returns undef if not a dir
 
 number of file entries in directory, returns undef if not a dir
 
-=cut
-=pod
 
 =head2 meta()
 
@@ -607,18 +595,15 @@ Deletes /home/myself/document.meta and /home/myself/.document.meta
 This is just to assure a file does not have metadata anymore.
 
 
-=cut
 
 =head1 DIGEST
 
-=cut
 =head2 md5_hex()
 
 returns md5 sum of file contents, cached in object {_data}
 if getting the md5sum digest does not work, returns undef
 see L<Digest::MD5>
 
-=cut
 
 
 
@@ -651,6 +636,3 @@ Please forwards any bug detection to author.
 
 Leo Charre leocharre at cpan dot org
 	
-=cut
-
-1
