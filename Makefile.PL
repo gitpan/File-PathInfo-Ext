@@ -4,10 +4,19 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
 	NAME => 'File::PathInfo::Ext',
 	VERSION_FROM => 'lib/File/PathInfo/Ext.pm',
-	PREREQ_PM => {
-		'File::PathInfo' => '1.12',
-		YAML => 0,
-		'File::Path' => 0,
-		'Digest::MD5' => 0,
-	},
+
+
+   # gen /usr/bin/pmused by Tue Jun 10 11:52:12 EDT 2008 
+   PREREQ_PM => {
+      'Carp'                              => '1',
+      'Cwd'                               => '3',
+      'Digest::MD5'                       => '2',
+      'File::Copy'                        => '2',
+      'File::Path'                        => '1',
+      'File::PathInfo'                    => '1',
+      'File::Type'                        => '0',
+      'Test::Simple'                      => '0',
+      'YAML'                              => '0',
+   },
+
 ); 
