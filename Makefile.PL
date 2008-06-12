@@ -1,4 +1,4 @@
-if( $^O=~/mswin32/i ){ die("Operating System Unsupported."); }
+if( $^O=~/mswin32/i ){ print "Operating System Unsupported." and exit; }
 use ExtUtils::MakeMaker;
 
 WriteMakefile(

@@ -60,10 +60,31 @@ demo/civil.txt
 	
 	ok( !(-f $f->abs_loc.'/.'.$f->filename .'.meta'),'meta gone');
 
-	for my $stat_key (qw(ctime mtime nlink size blocks atime_pretty mtime_pretty ctime_pretty ino)){		
-		ok($f->$stat_key, "stat key method  '$stat_key()'") ;
-	}
+   
+   if( $^O!~/linux|unix|gnu/i ){
+      ok( 1,'skipping stat tests, not unix/linux/gnu');
+   }
 
+   else {
+
+      for my $stat_key (
+         qw(ctime mtime nlink size blocks atime_pretty mtime_pretty ctime_pretty ino)
+      ){	
+         my $stat_val = $f->$stat_key;
+         
+
+         no warnings;
+         print STDERR " stat key '$stat_key' = '$stat_val'\n";
+         
+         unless( defined $stat_val ){
+            print STDERR ("no return for stat key/method '$stat_key'")
+               and next;
+         }
+         
+         ok($f->$stat_key, "stat key method  '$stat_key()'") ;
+         
+      }
+   }
 
 	if ($f->is_file){
 		my $digest;

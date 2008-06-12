@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = sprintf "%d.%02d", q$Revision: 1.22 $ =~ /(\d+)/g;
+$VERSION = sprintf "%d.%02d", q$Revision: 1.23 $ =~ /(\d+)/g;
 
 # extended, with metadata
 my $DEBUG=0; sub DEBUG : lvalue { $DEBUG }
@@ -636,4 +636,9 @@ Please forwards any bug detection to author.
 =head1 AUTHOR
 
 Leo Charre leocharre at cpan dot org
-	
+
+=head1 CAVEATS
+
+Will not work on non-posix systems.
+
+=cut
