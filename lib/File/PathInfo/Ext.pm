@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = sprintf "%d.%02d", q$Revision: 1.23 $ =~ /(\d+)/g;
+$VERSION = sprintf "%d.%02d", q$Revision: 1.24 $ =~ /(\d+)/g;
 
 # extended, with metadata
 my $DEBUG=0; sub DEBUG : lvalue { $DEBUG }
@@ -12,7 +12,6 @@ my $META_HIDDEN=1; sub META_HIDDEN : lvalue { $META_HIDDEN }
 my $META_EXT = 'meta'; sub META_EXT : lvalue { $META_EXT }
 
 # TODO : rename must be able to fix up metadata
-# 
 sub debug { print STDERR __PACKAGE__.": @_\n" if DEBUG; return 1; }
 
 
