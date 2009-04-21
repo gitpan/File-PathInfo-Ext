@@ -1,3 +1,12 @@
+2008-10-11 22:24  cvs
+
+	* lib/File/PathInfo/Ext.pm, t/99_cleanup.t: added copy(), and
+	  tests.  added t/99_cleanup.t
+
+2008-07-03 20:12  cvs
+
+	* Changes, MANIFEST: added Changes file
+
 2008-07-03 20:11  cvs
 
 	* lib/File/PathInfo/Ext.pm, t/0.t: changed test so it checks for

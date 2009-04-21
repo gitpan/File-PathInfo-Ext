@@ -1,10 +1,11 @@
 package File::PathInfo::Ext;
 use base 'File::PathInfo';
 use strict;
+#use Smart::Comments '####';
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = sprintf "%d.%02d", q$Revision: 1.24 $ =~ /(\d+)/g;
+$VERSION = sprintf "%d.%02d", q$Revision: 1.27 $ =~ /(\d+)/g;
 
 # extended, with metadata
 my $DEBUG=0; sub DEBUG : lvalue { $DEBUG }
@@ -48,6 +49,7 @@ sub rename {
 	
    debug("meta renamed to $to");
 
+
 	# both hidden and non hidden... hmmm 
    # TODO inspect this
 	rename( $self->abs_loc .'/.'.$self->filename . '.' . META_EXT,  $to );
@@ -56,6 +58,91 @@ sub rename {
 	$self->set($abs_path_new) or die($!);
 	return $abs_path_new;
 }
+
+
+sub copy {
+   my ($self,$to) = @_;
+
+   my $abs_to = $self->_resolve_arg_to($to) or return;
+
+   require File::Copy;
+   File::Copy::cp($self->abs_path, $abs_to ) 
+      or $self->errstr("Could not copy to $abs_to, $!") and return;
+
+   $self->set($abs_to) or return;
+
+   return $abs_to;
+}
+
+
+sub _resolve_arg_to { # just resolves where user wants to move thing to, does not check anything else
+   my ($self,$to) = @_;
+   $to or confess;
+
+   # I) 
+   # resolve it
+   my $abs_to;
+
+   # filename.ext
+   if( $to=~/^\.\w|^\w/ ){
+      $abs_to = $self->abs_loc . '/'.$to;
+      #### via ./ or \w
+   }
+
+   # ./filename.ext
+   elsif( $to=~s/^\.\/// ){
+      $abs_to = Cwd::cwd().'/'.$to;
+      #### via cwd
+   }
+   
+   # MUST HAPPEN BEFORE ^/ test
+   # /path/ dir to move to?
+   elsif( $to=~s/\/+$// ){
+      $abs_to =  $to.'/'.$self->filename;
+      #### via dir/
+   }
+
+   # /path/filename.ext
+   elsif( $to=~/^\// ){
+      $abs_to = $to;
+      #### via /
+   }
+   
+
+   else {
+      # ../ ???? etc 
+      $self->errstr("Can't resolve arg $to.") and return;
+   }
+
+   $abs_to = Cwd::abs_path($abs_to);
+   ( defined $abs_to and $abs_to )
+      or $self->errstr("Can't resolve arg $to") 
+      and return;
+
+   #### $abs_to
+
+   
+
+   # II)
+   # check it
+   $abs_to=~/^(.+)\// or die;
+   my $abs_loc = $1; 
+   #### $abs_loc
+   -d $abs_loc 
+      or $self->errstr("Can't set destination to '$abs_to', dir '$abs_loc' does not exist.")
+      and return;
+
+   -e $abs_to
+      and $self->errstr("Can't set destination to '$abs_to', already exists.")
+      and return;
+
+   $abs_to;
+}
+
+
+
+
+
 
 
 
