@@ -5,10 +5,14 @@ use File::PathInfo::Ext;
 use Cwd;
 use warnings;
 use Carp;
-File::PathInfo::RESOLVE_SYMLINKS =0;
-File::PathInfo::Ext::DEBUG =0;
+
+#$File::PathInfo::RESOLVE_SYMLINKS = 0;
+
+#$File::PathInfo::Ext::DEBUG = 0;
 
 $ENV{DOCUMENT_ROOT} = cwd().'/t/public_html';
+
+
 
 my $i = 0;
 
@@ -36,13 +40,14 @@ demo/civil.txt
 
 	$f->meta->{title} = 'hello';
 	
-	$f->meta_save;
+	ok( $f->meta_save,'meta_save()');
 	
 	ok(-f $f->abs_loc.'/.'.$f->filename .'.meta','meta present');	
 
 	# try rename
 	my $newname = 'hahahahaha.hahaha';
-	ok( $f->rename($newname) );
+
+	ok( $f->rename($newname),'rename()' );
 	# make sure meta was renamed
 	ok(-f $f->abs_loc.'/.'.$newname.'.meta');
 	ok($f->meta->{title} eq 'hello');

@@ -6,8 +6,8 @@ use Cwd;
 use warnings;
 use Carp;
 use Cwd;
-File::PathInfo::RESOLVE_SYMLINKS = 0;
-File::PathInfo::Ext::DEBUG = 1;
+$File::PathInfo::RESOLVE_SYMLINKS = 0;
+$File::PathInfo::Ext::DEBUG = 1;
 $ENV{DOCUMENT_ROOT} = cwd().'/t/public_html';
 
 
@@ -33,13 +33,13 @@ my $d = new File::PathInfo::Ext(cwd());
 
 ok ( $d->ls, 'ls');
 ok ( $d->lsa, 'lsa' );
-ok ( $d->lsf);
-ok( $d->lsfa);
-ok($d->lsd);
-ok($d->lsda);
+ok ( $d->lsf,'lsf');
+ok( $d->lsfa,'lsfa');
+ok($d->lsd,'lsd');
+ok($d->lsda,'lsda');
 
 
-ok(!$d->is_empty_dir, 'is empty dir returns no');
+ok( !$d->is_empty_dir, 'is empty dir returns no for '.cwd()) or die;
 
 
 
@@ -47,13 +47,25 @@ mkdir cwd().'/tmp2';
 
 $d->set(cwd().'/tmp2');
 
-ok( $d->is_empty_dir , ' is empty dir returns yes' );
+ok( $d->is_empty_dir , 'is_empty_dir() is empty dir returns yes' );
+
+
 
 my $datahash = $d->get_datahash;
 
 ok( exists $datahash->{is_empty_dir} );
-
 ### $datahash
+
+
+# put hidden file in there and make sure it returns false for empty dir
+`touch ./tmp2/.ha`;
+-f './tmp2/.ha' or die;
+ok( $d->set('./tmp2') );
+ok( ! $d->is_empty_dir,'is not empty dir if hidden file resides');
+
+
+unlink './tmp2/.ha';
+
 
 
 rmdir $d->abs_path;

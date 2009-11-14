@@ -1,3 +1,9 @@
+2009-11-14 14:40  cvs
+
+	* MANIFEST, META.yml, Makefile.PL, lib/File/PathInfo/Ext.pm, t/0.t,
+	  t/1.t, t/2_move.t, t/5_copy.t: made move act more like
+	  File::Copy::move() Improved meta.
+
 2008-10-11 22:24  cvs
 
 	* lib/File/PathInfo/Ext.pm, t/99_cleanup.t: added copy(), and
