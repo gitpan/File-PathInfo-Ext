@@ -275,10 +275,6 @@ Metadata ext, by default .meta
 
 	File::PathInfo::Ext::META_EXT = meta;
 
-Debug
-
-	File::PathInfo::Ext::DEBUG = 1;	
-
 =head1 BUGS
 
 Yes. No doubt.

@@ -1,11 +1,10 @@
 package File::PathInfo::Ext;
 use base 'File::PathInfo';
 use strict;
-use LEOCHARRE::Debug;
 use warnings;
 use Carp;
 use vars qw($VERSION $META_HIDDEN $META_EXT);
-$VERSION = sprintf "%d.%02d", q$Revision: 1.29 $ =~ /(\d+)/g;
+$VERSION = sprintf "%d.%02d", q$Revision: 1.30 $ =~ /(\d+)/g;
 
 $META_HIDDEN = 1; 
 $META_EXT = 'meta'; 
@@ -119,7 +118,7 @@ sub _resolve_arg_to {
 
 sub move {
 	my ($self, $to) =(shift, shift);
-	debug("move() called [$to]");
+	### move called: $to
 	require File::Copy; 
 		# using this in the package headers was causing a warning,
 		# move redefined.. bla bla.. it is quite annoying to export by default
@@ -177,7 +176,7 @@ sub ls {
 	$self->is_dir or return;
 
 	unless(defined $self->{_data}->{ls}){
-		printf STDERR "ls for [%s]\n", $self->abs_path if $DEBUG;
+		printf STDERR "ls for [%s]\n", $self->abs_path;
 		opendir(DIR, $self->abs_path);
 		my @ls = grep { !/^\.+$/ } readdir DIR;
 		close DIR;
